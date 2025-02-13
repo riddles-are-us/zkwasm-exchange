@@ -5,6 +5,7 @@
     "@types/node": "^20.14.2",
     "@types/sha256": "^0.2.2",
     "delphinus-curves": "github:DelphinusLab/delphinus-curves#xgao",
+    "fs": "^0.0.1-security",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5",
     "zkwasm-minirollup-rpc": "github:DelphinusLab/zkWasm-minirollup-rpc",
