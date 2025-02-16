@@ -194,7 +194,7 @@ async function eventCallback(arg: TxWitness, data: BigUint64Array) {
     let trade = trades[0];
     let player = new Player(get_server_admin_key(), "http://localhost:3000");
     console.log("add trade", trade.a_order_id, trade.b_order_id, trade.a_actual_amount, trade.b_actual_amount);
-    // player.addTrace(trade.a_order_id, trade.b_order_id, trade.a_actual_amount, trade.b_actual_amount);
+    player.addTrace(trade.a_order_id, trade.b_order_id, trade.a_actual_amount, trade.b_actual_amount);
   }
 }
 

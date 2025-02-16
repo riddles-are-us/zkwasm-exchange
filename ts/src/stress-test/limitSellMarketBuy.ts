@@ -30,7 +30,7 @@ const accounts = readAccountsFromFile(filename);
 const playerA = new Player(accounts[0].account, "http://localhost:3000");
 const playerB = new Player(accounts[1].account, "http://localhost:3000");
 
-async function main() {
+async function test() {
   let name = "limit order sell and market order buy test, b token amount:";
   console.log(name, "add limit order, sell");
   let state = await playerA.addLimitOrder(1n, 0n, BigInt(1e9), 33n);
@@ -56,7 +56,7 @@ async function wait_for_completed(s_id:string) {
 		});
 		let orderObj = order ? Order.fromMongooseDoc(order) : null; 
 		if (orderObj) {
-			console.log("(after)   orderObj", s_id, orderObj);
+			//console.log("(after)   orderObj", s_id, orderObj);
 			if (orderObj.status == Order.STATUS_MATCH || orderObj.status == Order.STATUS_PARTIAL_MATCH) {
 				console.log(s_id, "completed with status:", orderObj.status); 
 				break;
@@ -66,6 +66,21 @@ async function wait_for_completed(s_id:string) {
 	} while (true);
 }
 
+function compareState(before:any, after:any, player:any) {
+	console.log("before positon", before.player.data.positions);
+	console.log("after positon", after.player.data.positions);
+}
+
+async function main() {
+	let playerAStateBefore = await playerA.getState();
+	let playerBStateBefore = await playerB.getState();
+	await test();
+	let playerAStateAfter = await playerA.getState();
+	let playerBStateAfter = await playerB.getState();
+	compareState(playerAStateBefore, playerAStateAfter,playerA);
+	compareState(playerBStateBefore, playerBStateAfter,playerB);
+
+}
 await main();
 process.exit(0);
 
