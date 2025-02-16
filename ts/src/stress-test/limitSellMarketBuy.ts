@@ -42,22 +42,28 @@ async function main() {
   let b_id = JSON.stringify(state.state.orders[state.state.orders.length-1].id, null, 3);
   console.log("order id=", b_id, typeof(b_id));
 
+  await Promise.all([
+	  wait_for_completed(s_id),
+	  wait_for_completed(b_id)
+  ]);
+  console.log("all order completed");
+}
 
-  //tbd: wait service.ts emit an order completed event!!
-
-  let order = await OrderModel.findOne({
-	  id: BigInt(s_id)
-  });
-  let orderObj = order ? Order.fromMongooseDoc(order) : null; 
-  console.log("(after)   orderObj", s_id, orderObj);
-
-  order = await OrderModel.findOne({
-	  id: BigInt(b_id)
-  });
-  orderObj = order ? Order.fromMongooseDoc(order) : null; 
-  console.log("(after)   orderObj", b_id, orderObj);
-
-  //tbd: check the order status
+async function wait_for_completed(s_id:string) {
+	do{
+		let order = await OrderModel.findOne({
+			id: BigInt(s_id)
+		});
+		let orderObj = order ? Order.fromMongooseDoc(order) : null; 
+		if (orderObj) {
+			console.log("(after)   orderObj", s_id, orderObj);
+			if (orderObj.status == Order.STATUS_MATCH || orderObj.status == Order.STATUS_PARTIAL_MATCH) {
+				console.log(s_id, "completed with status:", orderObj.status); 
+				break;
+			}
+		}
+		await new Promise(resolve => setTimeout(resolve, 1000)); // 1-second delay	
+	} while (true);
 }
 
 await main();
