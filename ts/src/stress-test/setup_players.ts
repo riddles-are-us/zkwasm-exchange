@@ -25,8 +25,10 @@ state = await admin_player.updateToken(0n, "0x70997970C51812dc3A010C7d01b50e0d17
 console.log("add token 1");
 state = await admin_player.addToken(1n, "0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
 
+console.log("add token 2");
+state = await admin_player.addToken(2n, "0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
 console.log("add token market");
-state = await admin_player.addMarket(0n, 1n, 100n);
+state = await admin_player.addMarket(1n, 2n, 100n);
 console.log(state);
 
 async function main() {
@@ -44,12 +46,19 @@ async function main() {
 			let playerPid = query(account).pkx;
 			console.log(playerPid);
 
+			console.log("Deposit 300000 tokens  2 to the player");
+			state = await admin_player.deposit(playerPid, 2n, 300000n);
+			state = await player.getState();
+			console.log(JSON.stringify(state, null, 3));
 			console.log("Deposit 300000 tokens  1 to the player");
 			state = await admin_player.deposit(playerPid, 1n, 300000n);
-			console.log("Deposit 300000 tokens  0 to the player");
-			state = await admin_player.deposit(playerPid, 0n, 300000n);
 			state = await player.getState();
-			console.log(JSON.stringify(state, null, 2));
+			console.log(JSON.stringify(state, null, 3));
+			console.log(JSON.stringify(state.player.data.positions, null, 3));
+			console.log("Deposit 100 tokens  0 to the player for fee");
+			state = await admin_player.deposit(playerPid, 0n, 10000n);
+			state = await player.getState();
+			console.log(JSON.stringify(state, null, 3));
                         //console.log(state);
 		}
 

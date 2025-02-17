@@ -49,6 +49,27 @@ async function test() {
   console.log("all order completed");
 }
 
+async function s_test(nr:any) {
+  let name = "limit order sell and market order buy test, b token amount:";
+  console.log(name, "add limit order, sell");
+  let orders = [];
+
+  for (let i=0; i<nr; i++){
+  let state = await playerA.addLimitOrder(1n, 0n, BigInt(1e9), 33n);
+  let s_id = JSON.stringify(state.state.orders[state.state.orders.length-1].id, null, 3);
+  orders.push(s_id);
+
+  state = await playerB.addMarketOrder(1n, 1n, 0n, 33n);
+  let b_id = JSON.stringify(state.state.orders[state.state.orders.length-1].id, null, 3);
+  orders.push(b_id);
+  }
+
+  let promises = orders.map(s_id => wait_for_completed(s_id));
+  await Promise.all(promises);
+  console.log("all order completed");
+}
+
+
 async function wait_for_completed(s_id:string) {
 	do{
 		let order = await OrderModel.findOne({
@@ -69,18 +90,26 @@ async function wait_for_completed(s_id:string) {
 function compareState(before:any, after:any, player:any) {
 	console.log("before positon", before.player.data.positions);
 	console.log("after positon", after.player.data.positions);
+	for (let tokenIdx=0; tokenIdx < before.player.data.positions.length; tokenIdx++){
+	 console.log(after.player.data.positions[tokenIdx].balance -before.player.data.positions[tokenIdx].balance);
+	}
 }
 
-async function main() {
+async function main(runTest:any) {
 	let playerAStateBefore = await playerA.getState();
 	let playerBStateBefore = await playerB.getState();
-	await test();
+	if (runTest === undefined || isNaN(runTest))
+		await test();
+	else 
+		await s_test(runTest);
 	let playerAStateAfter = await playerA.getState();
 	let playerBStateAfter = await playerB.getState();
 	compareState(playerAStateBefore, playerAStateAfter,playerA);
 	compareState(playerBStateBefore, playerBStateAfter,playerB);
 
 }
-await main();
+const runTest = parseInt(process.argv[2], 10);
+
+await main(runTest);
 process.exit(0);
 

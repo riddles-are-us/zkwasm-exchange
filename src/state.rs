@@ -30,7 +30,7 @@ pub struct StateDebug {
     pub trades: Vec<Trade>,
 }
 
-const MAX_TOKEN_IDX: u32 = 2;
+const MAX_TOKEN_IDX: u32 = 4;
 
 impl State {
     pub fn get_state(pkey: Vec<u64>) -> String {
