@@ -871,11 +871,11 @@ impl Transaction {
         };
 
         let position = player.data.load_position(token_idx, pid);
+            let balance = position.balance;
+            zkwasm_rust_sdk::dbg!("add market order, token_idx {} balance {} is not enough, cost {}\n", token_idx, balance, cost);
         // todo check overflow
         if position.balance < cost {
-            let balance = position.balance;
 
-            zkwasm_rust_sdk::dbg!("add market order, token_idx {} balance {} is not enough, cost {}\n", token_idx, balance, cost);
             return Err(ERROR_BALANCE_NOT_ENOUGH);
         }
 

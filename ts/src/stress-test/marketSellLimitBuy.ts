@@ -31,14 +31,28 @@ const playerA = new Player(accounts[0].account, "http://localhost:3000");
 const playerB = new Player(accounts[1].account, "http://localhost:3000");
 
 async function test() {
-  let name = "limit order sell and market order buy test, b token amount:";
-  console.log(name, "add limit order, sell");
-  let state = await playerA.addLimitOrder(1n, SELL, BigInt(1e9), sellAmount);
+  let name = "market order sell and limit order buy test, b token amount:";
+  console.log(name, "add market order, sell");
+  let before = await playerA.getState();
+  //let state = await playerA.addMarketOrder(1n, SELL, 0n, sellAmount); //why need *2?
+  let state = await playerA.addMarketOrder(1n, SELL, sellAmount, 0n);
   let s_id = JSON.stringify(state.state.orders[state.state.orders.length-1].id, null, 3);
   console.log("order id=", s_id);
 
-  console.log(name, "add market order, buy");
-  state = await playerB.addMarketOrder(1n, BUY, 0n, buyAmount);
+  let tokenIdx = 1;
+  console.log(tokenIdx,
+	      before.player.data.positions[tokenIdx].lock_balance,
+              state.player.data.positions[tokenIdx].lock_balance,
+              sellAmount);
+
+  tokenIdx = 2;
+  console.log(tokenIdx,
+	      before.player.data.positions[tokenIdx].lock_balance,
+              state.player.data.positions[tokenIdx].lock_balance,
+              sellAmount);
+
+  console.log(name, "add limit order, buy");
+  state = await playerB.addLimitOrder(1n, BUY, BigInt(1e9), buyAmount);
   let b_id = JSON.stringify(state.state.orders[state.state.orders.length-1].id, null, 3);
   console.log("order id=", b_id, typeof(b_id));
 
@@ -50,16 +64,15 @@ async function test() {
 }
 
 async function s_test(nr:any) {
-  let name = "limit order sell and market order buy test, b token amount:";
-  console.log(name, "add limit order, sell");
+  let name = "market order sell and limit order buy test, b token amount:";
   let orders = [];
 
   for (let i=0; i<nr; i++){
-  let state = await playerA.addLimitOrder(1n, SELL, BigInt(1e9), sellAmount);
+  let state = await playerA.addMarketOrder(1n, SELL, 0n, sellAmount);
   let s_id = JSON.stringify(state.state.orders[state.state.orders.length-1].id, null, 3);
   orders.push(s_id);
 
-  state = await playerB.addMarketOrder(1n, BUY, 0n, buyAmount);
+  state = await playerB.addLimitOrder(1n, BUY, BigInt(1e9), buyAmount);
   let b_id = JSON.stringify(state.state.orders[state.state.orders.length-1].id, null, 3);
   orders.push(b_id);
   }

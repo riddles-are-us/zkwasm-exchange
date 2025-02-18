@@ -5,9 +5,11 @@ import {get_server_admin_key} from "zkwasm-ts-server/src/config.js";
 import { query} from "zkwasm-ts-server";
 import {hasSubscribers} from "node:diagnostics_channel";
 import * as fs from 'fs';
+import { fee, accountNumber, BUY, SELL, buyAmount, sellAmount } from './consts.js';
+
+
 let admin_player = new Player(get_server_admin_key(), "http://localhost:3000");
 
-const fee = 3n;
 
 function readAccountsFromFile(filePath: string) {
 	const jsonData = fs.readFileSync(filePath, 'utf-8');
@@ -55,7 +57,7 @@ async function main() {
 			state = await player.getState();
 			console.log(JSON.stringify(state, null, 3));
 			console.log(JSON.stringify(state.player.data.positions, null, 3));
-			console.log("Deposit 100 tokens  0 to the player for fee");
+			console.log("Deposit 10000 tokens  0 to the player for fee");
 			state = await admin_player.deposit(playerPid, 0n, 10000n);
 			state = await player.getState();
 			console.log(JSON.stringify(state, null, 3));

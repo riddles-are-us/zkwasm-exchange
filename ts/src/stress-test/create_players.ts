@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import { ethers } from 'ethers';
 
-const accountNumber = 20; //create 20 players
+import { fee, accountNumber, BUY, SELL, buyAmount, sellAmount } from './consts.js';
 
 async function get_account(priv:any, pub:any) {
 	  let provider = new ethers.JsonRpcProvider("https://sepolia.infura.io/v3/4b4be6c5b4bd470f82aef19420785482");
