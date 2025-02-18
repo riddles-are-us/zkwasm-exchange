@@ -62,6 +62,15 @@ async function s_test(nr:any) {
   state = await playerB.addMarketOrder(1n, BUY, 0n, buyAmount);
   let b_id = JSON.stringify(state.state.orders[state.state.orders.length-1].id, null, 3);
   orders.push(b_id);
+
+  state = await playerA.addLimitOrder(1n, SELL, BigInt(1e9), sellAmount);
+  s_id = JSON.stringify(state.state.orders[state.state.orders.length-1].id, null, 3);
+  orders.push(s_id);
+
+  state = await playerB.addMarketOrder(1n, BUY, buyAmount, 0n);
+  b_id = JSON.stringify(state.state.orders[state.state.orders.length-1].id, null, 3);
+  orders.push(b_id);
+
   }
 
   let promises = orders.map(s_id => wait_for_completed(s_id));
