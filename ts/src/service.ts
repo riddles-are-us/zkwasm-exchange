@@ -94,7 +94,7 @@ async function eventCallback(arg: TxWitness, data: BigUint64Array) {
   insertTxIntoCommit(currentUncommitMerkleRoot, arg, preemptcounter);
   preemptcounter ++;
 
-  console.log("eventCallback", arg, data);
+  //console.log("eventCallback", arg, data);
   if(data[0] != 0n) {
     console.log("non-zero return, tx failed");
     return;
@@ -121,7 +121,7 @@ async function eventCallback(arg: TxWitness, data: BigUint64Array) {
     let eventType = Number(data[i]>>32n);
     let eventLength = data[i]&((1n<<32n)-1n);
     let eventData = data.slice(i+1, i+1+Number(eventLength));
-    console.log("event", eventType, eventLength, eventData);
+    //console.log("event", eventType, eventLength, eventData);
     switch(eventType) {
       case EVENT_POSITION:
         {
@@ -149,16 +149,20 @@ async function eventCallback(arg: TxWitness, data: BigUint64Array) {
           let market = Market.fromEvent(eventData);
           let doc = await MarketModel.findOneAndUpdate({marketId: market.marketId}, market.toObject(), {upsert: true});
           console.log("save market", doc);
-          let ms = new MatchingSystem(BigInt(market.marketId));
-          msM.set(BigInt(market.marketId), ms);
+	  let marketId = BigInt(market.marketId);
+
+	  if (!msM.has(marketId)) {
+	    let ms = new MatchingSystem(marketId);
+	    msM.set(marketId, ms);
+	  }
         }
         break;
       case EVENT_ORDER:
         {
-          console.log("order event");
           let order = Order.fromEvent(eventData);
+          console.log("order event, order.id=", order.id);
           let doc = await OrderModel.findOneAndUpdate({id: order.id}, order.toObject(), {upsert: true});
-          console.log("save order", order);
+          console.log("save order", order.id);
           if(!msM.has(order.market_id)) {
               console.log("market not found");
               throw new Error("market not found, in match system map");
@@ -166,12 +170,15 @@ async function eventCallback(arg: TxWitness, data: BigUint64Array) {
           let ms = msM.get(order.market_id) as MatchingSystem;
           ms.upsertOrder(order);
           needtryMatchSystems.add(order.market_id);
+	  console.log(ms.queryInfo());
         }
         break;
       case EVENT_TRADE:
         {
           console.log("trade event");
           let trade = Trade.fromEvent(eventData);
+	  let ms = msM.get(trade.market_id) as MatchingSystem;
+	  console.log(trade.market_id, ms.queryInfo());
           let doc = await TradeModel.findOneAndUpdate({trade_id: trade.trade_id}, trade.toObject(), {upsert: true});
           console.log("save trade", trade);
         }
