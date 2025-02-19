@@ -12,7 +12,38 @@ const fee = 3n;
 const SELL = 0n;
 const BUY = 1n;
 let id = "0";
-const nrMaker = 3;
+const nrMaker = 5;
+const nrTaker = 1;
+
+let makerPrices : bigint[] = [];
+let makerAmounts : bigint[] = [];
+for (let i = 0; i < nrMaker; i++) {
+	  makerPrices.push((10n + BigInt(i * 10)) * PRICISION);  // Adjust price
+	  makerAmounts.push(50n + BigInt(i * 10));  // Adjust amount
+}
+let totalMakerValue = makerPrices.reduce((sum, price, index) => sum + (price * makerAmounts[index]), 0n);
+let totalMakerAmount = makerAmounts.reduce((sum, amount) => sum + amount, 0n);
+
+console.log(totalMakerValue);
+console.log(makerPrices, makerAmounts);
+
+let totalTakerAmount = 0n;
+let equalValuePerTaker = totalMakerAmount / BigInt(nrTaker);
+
+let takerPrices : bigint[] = [];
+let takerAmounts : bigint[] = [];
+for (let i = 0; i < nrTaker; i++) {
+	 let increasedTakerPrice = makerPrices[nrMaker-1] * (105n+BigInt(i*10))/100n;//+5%;
+         takerPrices.push(increasedTakerPrice);
+
+	 let takerAmount = equalValuePerTaker;
+	 takerAmounts.push(takerAmount);
+	          
+	 // Keep track of total amount to balance it
+	 totalTakerAmount += takerAmount;
+}
+console.log(totalTakerAmount);
+console.log(takerPrices, takerAmounts);
 
 function getPkey(player:Player) : string{ 
 let pkey = PrivateKey.fromString(player.processingKey);
@@ -52,16 +83,14 @@ async function waitForOrderCompletion(s_id:string) {
 
 
 async function simulationTestPriceSpreadWithComparison() {
-  const makerPrices = [990n*PRICISION, 1000n*PRICISION, 1010n*PRICISION];
-  const makerAmounts = [50n, 60n, 70n];
-  const totalAmount = makerAmounts.reduce((a, b) => a + b, 0n);
-  const takerPrices = 1020n*PRICISION;
-
   const makers: Player[] = [];
   for (let i = 0; i < nrMaker; i++) {
     makers.push(new Player(`00012345${i}`, "http://localhost:3000"));
   }
-  const taker = new Player("11112345", "http://localhost:3000");
+  const takers: Player[] = [];
+  for (let i = 0; i < nrTaker; i++) {
+    takers.push(new Player(`11112345${i}`, "http://localhost:3000"));
+  }
 
   const admin = new Player(get_server_admin_key(), "http://localhost:3000");
   console.log("Admin registering...");
@@ -79,18 +108,19 @@ async function simulationTestPriceSpreadWithComparison() {
     await admin.deposit(getPkey(makers[i]), 0n, 100000n);
     await admin.deposit(getPkey(makers[i]), 1n, 100000n);
     await admin.deposit(getPkey(makers[i]), 2n, 100000n);
-  //  await makers[i].deposit("428c73246352807b9b31b84ff788103abc7932b72801a1b23734e7915cc7f610",0n, 100000n);
   }
 
-  console.log("Taker: registering and depositing tokenA and tokenB...");
-  await taker.register();
-  await admin.deposit(getPkey(taker), 0n, 1000000n);
-  await admin.deposit(getPkey(taker), 1n, 1000000n);
-  await admin.deposit(getPkey(taker), 2n, 1000000n);
+  for (let i = 0; i < nrTaker; i++) {
+    console.log(`Taker ${i}: registering and depositing tokenA and tokenB...`);
+    await takers[i].register();
+    await admin.deposit(getPkey(takers[i]), 0n, 1000000n);
+    await admin.deposit(getPkey(takers[i]), 1n, 1000000n);
+    await admin.deposit(getPkey(takers[i]), 2n, 1000000n);
+  }
 
   // Step 2: Record initial balances
   const initialBalances = {
-    taker: await taker.getState(),
+    takers: await Promise.all(takers.map(m=> m.getState())),
     makers: await Promise.all(makers.map(m => m.getState()))
   };
 
@@ -103,19 +133,25 @@ async function simulationTestPriceSpreadWithComparison() {
     console.log(`Maker ${i} placing limit sell order... ${id}`, "amount:", makerAmounts[i]);
   }
 
-  const state = await taker.addLimitOrder(1n, BUY, takerPrices, totalAmount);
-  const takerOrderId = JSON.stringify(state.state.orders[state.state.orders.length-1].id, null, 3);
-  console.log(`Taker placing limit buy order...${takerOrderId}`, "amount:", totalAmount);
+  let takerOrderIds = [];
+  for (let i = 0; i < nrTaker; i++) {
+    const state = await takers[i].addLimitOrder(1n, BUY, takerPrices[i], takerAmounts[i]);
+    id = JSON.stringify(state.state.orders[state.state.orders.length-1].id, null, 3);
+    takerOrderIds.push(id);
+    console.log(`Taker placing limit buy order...${id}`, "amount:", takerAmounts[i]);
+  }
 
   // Step 4: Wait for orders to complete
-  await waitForOrderCompletion(takerOrderId);
+  for (let i = 0; i < nrTaker; i++) {
+    await waitForOrderCompletion(takerOrderIds[i]);
+  }
   for (let i = 0; i < nrMaker; i++) {
     await waitForOrderCompletion(makerOrderIds[i]);
   }
 
   // Step 5: Fetch final balances
   const finalBalances = {
-    taker: await taker.getState(),
+    takers: await Promise.all(takers.map(m=> m.getState())),
     makers: await Promise.all(makers.map(m => m.getState()))
   };
 
@@ -140,31 +176,33 @@ async function simulationTestPriceSpreadWithComparison() {
     if (actualMakerAReceived !== expectedMakerAReceived) {
       console.
 
-error(`Maker ${i} tokenA mismatch! Expected ${expectedMakerAReceived}, got ${actualMakerAReceived}`);
+error(`Maker ${i} tokenA mismatch! Expected recv ${expectedMakerAReceived}, got ${actualMakerAReceived}`);
     }
     if (actualMakerBSpent !== expectedMakerBSpent) {
-      console.error(`Maker ${i} tokenB mismatch! Expected ${expectedMakerBSpent}, got ${actualMakerBSpent}`);
+      console.error(`Maker ${i} tokenB mismatch! Expected spent ${expectedMakerBSpent}, got ${actualMakerBSpent}`);
     }
 
-    expectedTakerATokenSpent += expectedMakerAReceived;
-    expectedTakerBTokenReceived += makerAmounts[i];
   }
 
-  const takerInitial = initialBalances.taker.player.data.positions;
-  const takerFinal = finalBalances.taker.player.data.positions;
+  for (let i = 0; i < nrTaker; i++) {
+    expectedTakerATokenSpent = takerAmounts[i] * (takerPrices[i]/PRICISION); //tbd:maybe use markerPrices[i] 
+    expectedTakerBTokenReceived = takerAmounts[i];
 
-  const actualTakerASpent = BigInt(takerInitial[1].balance - takerFinal[1].balance);
-  const actualTakerBReceived = BigInt(takerFinal[2].balance - takerInitial[2].balance);
+    const takerInitial = initialBalances.takers[i].player.data.positions;
+    const takerFinal = finalBalances.takers[i].player.data.positions;
 
-  if (actualTakerASpent !== expectedTakerATokenSpent) {
-    console.error(`Taker tokenA mismatch! Expected ${expectedTakerATokenSpent}, got ${actualTakerASpent}`);
-  }
-  if (actualTakerBReceived !== expectedTakerBTokenReceived) {
-    console.error(`Taker tokenB mismatch! Expected ${expectedTakerBTokenReceived}, got ${actualTakerBReceived}`);
-  }
+    const actualTakerASpent = BigInt(takerInitial[1].balance - takerFinal[1].balance);
+    const actualTakerBReceived = BigInt(takerFinal[2].balance - takerInitial[2].balance);
+
+    if (actualTakerASpent !== expectedTakerATokenSpent) {
+      console.error(`Taker tokenA mismatch! Expected spent ${expectedTakerATokenSpent}, acutal spent ${actualTakerASpent}`);
+    }
+    if (actualTakerBReceived !== expectedTakerBTokenReceived) {
+      console.error(`Taker tokenB mismatch! Expected recv ${expectedTakerBTokenReceived}, got ${actualTakerBReceived}`);
+    }
     console.log(takerInitial);
     console.log(takerFinal);
-
+  }
   console.log("Price spread test with balance comparison completed.");
 }
 
