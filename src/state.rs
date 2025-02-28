@@ -2,7 +2,7 @@ use crate::player::{ExchangePlayer};
 use crate::settlement::SettlementInfo;
 use serde::Serialize;
 use zkwasm_rest_abi::{MERKLE_MAP, StorageData};
-use crate::transaction::{Order, Trade};
+use crate::transaction::{Order, Trade, Market};
 
 #[derive(Serialize)]
 pub struct State {
@@ -28,6 +28,7 @@ pub struct StateDebug {
     // add debug order, trade, market info
     pub orders: Vec<Order>,
     pub trades: Vec<Trade>,
+    pub markets: Vec<Market>,
 }
 
 const MAX_TOKEN_IDX: u32 = 2;
@@ -89,6 +90,7 @@ impl State {
             event_id_counter: state.event_id_counter,
             orders: vec![],
             trades: vec![],
+            markets: vec![]
         };
 
         for i in  1..(state.order_id_counter + 1) {
@@ -102,6 +104,13 @@ impl State {
             let trade = Trade::load(i);
             if trade.is_some() {
                 state_debug.trades.push(trade.unwrap());
+            }
+        }
+
+        for i in  1..(state.market_id_counter + 1) {
+            let market = Market::load(i);
+            if market.is_some() {
+                state_debug.markets.push(market.unwrap());
             }
         }
 

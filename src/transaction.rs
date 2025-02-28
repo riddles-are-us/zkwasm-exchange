@@ -1077,7 +1077,7 @@ pub enum Data {
     Withdraw(WithdrawParams),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Market {
     /// market id 对应交易对
     pub market_id: u64,
