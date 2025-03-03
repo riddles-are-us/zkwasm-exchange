@@ -12,14 +12,14 @@ const fee = 3n;
 const SELL = 0n;
 const BUY = 1n;
 let id = "0";
-const nrMaker = 5;
-const nrTaker = 1;
+const nrMaker = 8;
+const nrTaker = 4;
 
 let makerPrices : bigint[] = [];
 let makerAmounts : bigint[] = [];
 for (let i = 0; i < nrMaker; i++) {
 	  makerPrices.push((10n + BigInt(i * 10)) * PRICISION);  // Adjust price
-	  makerAmounts.push(50n + BigInt(i * 10));  // Adjust amount
+	  makerAmounts.push(16n + BigInt(i * 10));  // Adjust amount
 }
 let totalMakerValue = makerPrices.reduce((sum, price, index) => sum + (price * makerAmounts[index]), 0n);
 let totalMakerAmount = makerAmounts.reduce((sum, amount) => sum + amount, 0n);
@@ -125,28 +125,43 @@ async function simulationTestPriceSpreadWithComparison() {
   };
 
   // Step 3: Place orders
-  let makerOrderIds = [];
+  let makerOrderIds: { [key: number]: string[] } = {};
   for (let i = 0; i < nrMaker; i++) {
-    const state = await makers[i].addLimitOrder(1n, SELL, makerPrices[i], makerAmounts[i]);
+    if (!makerOrderIds[i])
+        makerOrderIds[i] = []; // Initialize the array for taker[i]
+
+    let state = await makers[i].addLimitOrder(1n, SELL, makerPrices[i], makerAmounts[i]);
     id = JSON.stringify(state.state.orders[state.state.orders.length-1].id, null, 3);
-    makerOrderIds.push(id);
-    console.log(`Maker ${i} placing limit sell order... ${id}`, "amount:", makerAmounts[i]);
+    makerOrderIds[i].push(id);
+
+    state = await makers[i].addLimitOrder(1n, SELL, makerPrices[i], makerAmounts[i]);
+    id = JSON.stringify(state.state.orders[state.state.orders.length-1].id, null, 3);
+    makerOrderIds[i].push(id);
+    console.log(`Maker ${i} placing limit sell order ${id}, ${makerOrderIds[i]}`, "amount:", makerAmounts[i]);
   }
 
-  let takerOrderIds = [];
+  let takerOrderIds: { [key: number]: string[] } = {};
   for (let i = 0; i < nrTaker; i++) {
-    const state = await takers[i].addLimitOrder(1n, BUY, takerPrices[i], takerAmounts[i]);
+    if (!takerOrderIds[i])
+        takerOrderIds[i] = []; // Initialize the array for taker[i]
+    let state = await takers[i].addLimitOrder(1n, BUY, takerPrices[i], takerAmounts[i]);
     id = JSON.stringify(state.state.orders[state.state.orders.length-1].id, null, 3);
-    takerOrderIds.push(id);
-    console.log(`Taker placing limit buy order...${id}`, "amount:", takerAmounts[i]);
+    takerOrderIds[i].push(id);
+
+    state = await takers[i].addLimitOrder(1n, BUY, takerPrices[i], takerAmounts[i]);
+    id = JSON.stringify(state.state.orders[state.state.orders.length-1].id, null, 3);
+    takerOrderIds[i].push(id);
+    console.log(`Taker ${i} placing limit buy order ${id}, ${takerOrderIds[i]}`, "amount:", takerAmounts[i]);
   }
 
   // Step 4: Wait for orders to complete
   for (let i = 0; i < nrTaker; i++) {
-    await waitForOrderCompletion(takerOrderIds[i]);
+	  const orderIds = takerOrderIds[i];
+	  await Promise.all(orderIds.map(orderId => waitForOrderCompletion(orderId)))
   }
   for (let i = 0; i < nrMaker; i++) {
-    await waitForOrderCompletion(makerOrderIds[i]);
+	  const orderIds = makerOrderIds[i];
+	  await Promise.all(orderIds.map(orderId => waitForOrderCompletion(orderId)))
   }
 
   // Step 5: Fetch final balances
