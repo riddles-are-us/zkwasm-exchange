@@ -146,8 +146,12 @@ async function eventCallback(arg: TxWitness, data: BigUint64Array) {
           let market = Market.fromEvent(eventData);
           let doc = await MarketModel.findOneAndUpdate({marketId: market.marketId}, market.toObject(), {upsert: true});
           console.log("save market", doc);
-          let ms = new MatchingSystem(BigInt(market.marketId));
-          msM.set(BigInt(market.marketId), ms);
+          let marketId = BigInt(market.marketId);
+
+          if (!msM.has(marketId)) {
+           let ms = new MatchingSystem(marketId);
+           msM.set(marketId, ms);
+          }
         }
         break;
       case EVENT_ORDER:
@@ -191,7 +195,7 @@ async function eventCallback(arg: TxWitness, data: BigUint64Array) {
     let trade = trades[0];
     let player = new Player(get_server_admin_key(), "http://localhost:3000");
     console.log("add trade", trade.a_order_id, trade.b_order_id, trade.a_actual_amount, trade.b_actual_amount);
-    // player.addTrace(trade.a_order_id, trade.b_order_id, trade.a_actual_amount, trade.b_actual_amount);
+    player.addTrace(trade.a_order_id, trade.b_order_id, trade.a_actual_amount, trade.b_actual_amount);
   }
 }
 
